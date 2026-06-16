@@ -23,10 +23,9 @@ Two API paradigms are implemented:
 
 ## Prerequisites
 
-- Java 21
-- Maven 3.9+
-- Docker + Docker Compose
-- Node.js 20+ (for TypeSpec spec validation)
+- Java 21 + Maven 3.9+
+- Docker Desktop (or Docker Engine + Compose plugin)
+- Node.js 20+ (for TypeSpec spec validation only)
 
 ## First-time Setup
 
@@ -34,9 +33,9 @@ Two API paradigms are implemented:
 ```bash
 curl -sSL https://rover.apollo.dev/nix/latest | sh
 ```
-Rover installs to `~/.rover/bin/`. The Makefile adds this to PATH automatically, so no shell config change is needed.
+Rover installs to `~/.rover/bin/`. The Makefile adds this to PATH automatically — no shell config needed.
 
-**2. Pull Docker images** — verify all required images are available before first run:
+**2. Pull infrastructure images** — do this once to avoid slow first-start:
 ```bash
 docker pull apache/kafka:3.7.1
 docker pull cassandra:5.0
@@ -45,7 +44,7 @@ docker pull redis:7.4-alpine
 docker pull ghcr.io/apollographql/router:v1.55.0
 ```
 
-**3. Install TypeSpec tooling** (for spec validation only):
+**3. Install TypeSpec tooling** (only needed if editing specs/):
 ```bash
 cd specs && npm ci && cd ..
 ```
@@ -54,9 +53,14 @@ cd specs && npm ci && cd ..
 
 ```bash
 make dev
-# Composes the supergraph schema then starts all services via docker-compose.
-# Router at http://localhost:4000 · GraphiQL at http://localhost:4000/
 ```
+
+`make dev` does three things in order:
+1. `make compose` — runs `rover supergraph compose` to build `services/router/supergraph.graphql` from the SDL files in `schema/`
+2. `make build` — runs `mvn clean package -DskipTests` to produce the service jars the Dockerfiles copy in
+3. `docker-compose up` — builds service images and starts everything
+
+Router at **http://localhost:4000** · GraphiQL sandbox at **http://localhost:4000/**
 
 ## Spec-Driven Workflow
 
