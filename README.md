@@ -23,9 +23,10 @@ Two API paradigms are implemented:
 
 ## Prerequisites
 
-- Java 21 + Maven 3.9+
 - Docker Desktop (or Docker Engine + Compose plugin)
 - Node.js 20+ (for TypeSpec spec validation only)
+
+Java and Maven are **not** required locally — services are compiled inside Docker using multi-stage builds.
 
 ## First-time Setup
 
@@ -55,10 +56,9 @@ cd specs && npm ci && cd ..
 make dev
 ```
 
-`make dev` does three things in order:
+`make dev` does two things in order:
 1. `make compose` — runs `rover supergraph compose` to build `services/router/supergraph.graphql` from the SDL files in `schema/`
-2. `make build` — runs `mvn clean package -DskipTests` to produce the service jars the Dockerfiles copy in
-3. `docker-compose up` — builds service images and starts everything
+2. `docker-compose up` — builds service images (Maven compiles inside Docker via multi-stage builds) and starts everything
 
 Router at **http://localhost:4000** · GraphiQL sandbox at **http://localhost:4000/**
 
@@ -75,11 +75,8 @@ vim schema/member/member.graphqls
 # 2. Validate the change composes cleanly
 make compose
 
-# 3. Build the affected service (picks up the updated schema)
-mvn clean package -pl services/member-service -am -DskipTests
-
-# 4. Run tests
-mvn test -pl services/member-service
+# 3. Restart the service to pick up the schema change
+docker-compose up --build member-service
 ```
 
 TypeSpec specs (REST auth + Kafka events) live in `specs/`:

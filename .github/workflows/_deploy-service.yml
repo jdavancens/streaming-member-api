@@ -30,12 +30,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
-        with:
-          java-version: "21"
-          distribution: temurin
-          cache: maven
-
       - name: Install Rover & compose supergraph
         run: |
           curl -sSL https://rover.apollo.dev/nix/latest | sh
@@ -43,9 +37,6 @@ jobs:
           rover supergraph compose --config supergraph.yaml --elv2-license=accept > services/router/supergraph.graphql
         env:
           APOLLO_KEY: ${{ secrets.APOLLO_KEY }}
-
-      - name: Build service
-        run: mvn clean package -pl services/${{ inputs.service }} -am -DskipTests=false
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -64,7 +55,8 @@ jobs:
         run: |
           docker build -t $ECR_REGISTRY/member-api-dev/${{ inputs.service }}:$IMAGE_TAG \
                        -t $ECR_REGISTRY/member-api-dev/${{ inputs.service }}:latest \
-                       services/${{ inputs.service }}
+                       -f services/${{ inputs.service }}/Dockerfile \
+                       .
           docker push $ECR_REGISTRY/member-api-dev/${{ inputs.service }}:$IMAGE_TAG
           docker push $ECR_REGISTRY/member-api-dev/${{ inputs.service }}:latest
 

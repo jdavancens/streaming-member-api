@@ -15,7 +15,7 @@ schema-check:
 spec-check:
 	cd specs && npx tsp compile . --no-emit
 
-dev: compose build
+dev: compose
 	docker-compose up
 
 build:

@@ -69,7 +69,9 @@ services:
   # ── Subgraph Services ────────────────────────────────────────────────────────
 
   member-service:
-    build: ./services/member-service
+    build:
+      context: .
+      dockerfile: services/member-service/Dockerfile
     ports:
       - "8081:8080"
     environment:
@@ -86,7 +88,9 @@ services:
         condition: service_healthy
 
   billing-service:
-    build: ./services/billing-service
+    build:
+      context: .
+      dockerfile: services/billing-service/Dockerfile
     ports:
       - "8082:8080"
     environment:
@@ -101,7 +105,9 @@ services:
         condition: service_healthy
 
   profile-service:
-    build: ./services/profile-service
+    build:
+      context: .
+      dockerfile: services/profile-service/Dockerfile
     ports:
       - "8083:8080"
     environment:
@@ -115,7 +121,9 @@ services:
         condition: service_healthy
 
   entitlement-service:
-    build: ./services/entitlement-service
+    build:
+      context: .
+      dockerfile: services/entitlement-service/Dockerfile
     ports:
       - "8084:8080"
     environment:
@@ -129,7 +137,9 @@ services:
         condition: service_healthy
 
   discovery-service:
-    build: ./services/discovery-service
+    build:
+      context: .
+      dockerfile: services/discovery-service/Dockerfile
     ports:
       - "8085:8080"
 
