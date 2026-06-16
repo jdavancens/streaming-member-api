@@ -26,20 +26,38 @@ Two API paradigms are implemented:
 - Java 21
 - Maven 3.9+
 - Docker + Docker Compose
-- [Rover CLI](https://www.apollographql.com/docs/rover/getting-started) (`curl -sSL https://rover.apollo.dev/nix/latest | sh`)
 - Node.js 20+ (for TypeSpec spec validation)
+
+## First-time Setup
+
+**1. Install Rover CLI** (Apollo's schema composition tool):
+```bash
+curl -sSL https://rover.apollo.dev/nix/latest | sh
+```
+Rover installs to `~/.rover/bin/`. The Makefile adds this to PATH automatically, so no shell config change is needed.
+
+**2. Pull Docker images** — verify all required images are available before first run:
+```bash
+docker pull apache/kafka:3.7.1
+docker pull cassandra:5.0
+docker pull mysql:8.4
+docker pull redis:7.4-alpine
+docker pull ghcr.io/apollographql/router:v1.55.0
+```
+
+**3. Install TypeSpec tooling** (for spec validation only):
+```bash
+cd specs && npm ci && cd ..
+```
 
 ## Quick Start
 
 ```bash
-# 1. Install TypeSpec tooling (one-time)
-cd specs && npm ci && cd ..
-
-# 2. Compose the supergraph schema from SDL files
+# Compose the supergraph schema from SDL files in schema/
 make compose               # writes services/router/supergraph.graphql
 
-# 3. Start everything
-docker-compose up
+# Build all service images and start everything
+docker-compose up --build
 
 # Router is now at http://localhost:4000
 # GraphiQL sandbox at http://localhost:4000/
