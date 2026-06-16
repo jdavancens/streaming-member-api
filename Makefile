@@ -1,7 +1,7 @@
 .PHONY: compose dev build test clean
 
 compose:
-	rover supergraph compose --config supergraph.yaml > services/router/supergraph.graphql
+	rover supergraph compose --config supergraph.yaml --elv2-license=accept > services/router/supergraph.graphql
 
 schema-check:
 	rover subgraph check --name member   --schema schema/member/member.graphqls
