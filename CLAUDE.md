@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A high-fidelity model of Netflix's Member API: a **Consumer Edge GraphQL** supergraph composed with **Apollo Federation v2**. Five Spring Boot + Netflix DGS subgraph services sit behind Apollo Router. The API paradigms implemented are **client-driven GraphQL** (standard field selection) and **Server-Driven UI (SDUI)** (discovery-service returns component trees, the client renders whatever the server says).
+A streaming member API model: a **Consumer Edge GraphQL** supergraph composed with **Apollo Federation v2**. Five Spring Boot + DGS (Domain Graph Service) subgraph services sit behind Apollo Router. The API paradigms implemented are **client-driven GraphQL** (standard field selection) and **Server-Driven UI (SDUI)** (discovery-service returns component trees, the client renders whatever the server says).
 
 ## Commands
 

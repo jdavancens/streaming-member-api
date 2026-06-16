@@ -11,12 +11,12 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.netflix.memberapi</groupId>
+    <groupId>com.streaming.memberapi</groupId>
     <artifactId>streaming-member-api</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Streaming Member API</name>
-    <description>Netflix Member API — Consumer Edge GraphQL with Apollo Federation v2</description>
+    <description>Streaming Member API — Consumer Edge GraphQL with Apollo Federation v2</description>
 
     <modules>
         <module>services/member-service</module>
