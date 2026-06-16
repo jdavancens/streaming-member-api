@@ -53,14 +53,9 @@ cd specs && npm ci && cd ..
 ## Quick Start
 
 ```bash
-# Compose the supergraph schema from SDL files in schema/
-make compose               # writes services/router/supergraph.graphql
-
-# Build all service images and start everything
-docker-compose up --build
-
-# Router is now at http://localhost:4000
-# GraphiQL sandbox at http://localhost:4000/
+make dev
+# Composes the supergraph schema then starts all services via docker-compose.
+# Router at http://localhost:4000 · GraphiQL at http://localhost:4000/
 ```
 
 ## Spec-Driven Workflow
