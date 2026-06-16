@@ -1,0 +1,10 @@
+{
+  "name": "streaming-member-api-specs",
+  "private": true,
+  "dependencies": {
+    "@typespec/compiler": "^0.61.0",
+    "@typespec/http": "^0.61.0",
+    "@typespec/rest": "^0.61.0",
+    "@typespec/openapi3": "^0.61.0"
+  }
+}

@@ -1,0 +1,11 @@
+# Custom lifecycle directives used across all subgraphs.
+# Each subgraph that uses these must include this file.
+
+directive @experimental(
+  reason: String = "This field is experimental and may change without notice."
+) on FIELD_DEFINITION
+
+directive @sunset(
+  date: String!
+  reason: String!
+) on FIELD_DEFINITION

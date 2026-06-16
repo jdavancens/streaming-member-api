@@ -1,0 +1,19 @@
+name: Deploy billing-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/billing-service/**"
+      - "schema/billing/**"
+      - "specs/events/**"
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy-service.yml
+    with:
+      service: billing-service
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+      APOLLO_KEY: ${{ secrets.APOLLO_KEY }}

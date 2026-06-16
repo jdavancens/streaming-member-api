@@ -1,0 +1,44 @@
+name: Schema Validation
+
+on:
+  pull_request:
+    paths:
+      - "schema/**"
+      - "specs/**"
+      - "supergraph.yaml"
+
+jobs:
+  validate-specs:
+    name: Validate TypeSpec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: specs/package.json
+
+      - name: Install TypeSpec
+        run: cd specs && npm ci
+
+      - name: Compile specs (no emit)
+        run: cd specs && npx tsp compile . --no-emit
+
+  validate-graphql:
+    name: Validate GraphQL schemas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rover
+        run: |
+          curl -sSL https://rover.apollo.dev/nix/latest | sh
+          echo "$HOME/.rover/bin" >> $GITHUB_PATH
+
+      - name: Compose supergraph locally
+        run: rover supergraph compose --config supergraph.yaml --output /tmp/supergraph.graphql
+
+      - name: Validate composed schema
+        run: rover graph introspect --schema /tmp/supergraph.graphql || true

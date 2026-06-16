@@ -1,0 +1,77 @@
+# Reusable workflow — called by each service's deploy workflow
+name: Deploy Service (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      aws_region:
+        required: false
+        type: string
+        default: us-east-1
+    secrets:
+      AWS_ACCOUNT_ID:
+        required: true
+      AWS_OIDC_ROLE_ARN:
+        required: true
+      APOLLO_KEY:
+        required: false
+
+jobs:
+  build-and-deploy:
+    name: Build, push, deploy ${{ inputs.service }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: Install Rover & compose supergraph
+        run: |
+          curl -sSL https://rover.apollo.dev/nix/latest | sh
+          echo "$HOME/.rover/bin" >> $GITHUB_PATH
+          rover supergraph compose --config supergraph.yaml > services/router/supergraph.graphql
+        env:
+          APOLLO_KEY: ${{ secrets.APOLLO_KEY }}
+
+      - name: Build service
+        run: mvn clean package -pl services/${{ inputs.service }} -am -DskipTests=false
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/member-api-dev/${{ inputs.service }}:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/member-api-dev/${{ inputs.service }}:latest \
+                       services/${{ inputs.service }}
+          docker push $ECR_REGISTRY/member-api-dev/${{ inputs.service }}:$IMAGE_TAG
+          docker push $ECR_REGISTRY/member-api-dev/${{ inputs.service }}:latest
+
+      - name: Deploy to ECS Fargate
+        run: |
+          aws ecs update-service \
+            --cluster member-api-dev \
+            --service ${{ inputs.service }} \
+            --force-new-deployment \
+            --region ${{ inputs.aws_region }}

@@ -1,0 +1,31 @@
+supergraph:
+  listen: 0.0.0.0:4000
+  introspection: true
+
+cors:
+  origins:
+    - http://localhost:3000
+    - http://localhost:4000
+  methods:
+    - GET
+    - POST
+    - OPTIONS
+
+headers:
+  all:
+    request:
+      - propagate:
+          named: authorization
+      - propagate:
+          named: x-device-id
+      - propagate:
+          named: x-platform
+
+telemetry:
+  instrumentation:
+    spans:
+      mode: spec_compliant
+
+health_check:
+  listen: 0.0.0.0:8088
+  path: /health

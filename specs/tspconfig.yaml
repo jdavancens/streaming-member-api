@@ -1,0 +1,11 @@
+emit:
+  - "@typespec/openapi3"
+
+options:
+  "@typespec/openapi3":
+    output-dir: tsp-output/openapi
+
+imports:
+  - ./auth.tsp
+  - ./events/member-events.tsp
+  - ./events/subscription-events.tsp

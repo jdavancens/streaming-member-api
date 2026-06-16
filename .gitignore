@@ -1,0 +1,42 @@
+# Maven
+target/
+*.class
+*.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Spring Boot
+application-local.yml
+
+# TypeSpec
+node_modules/
+specs/node_modules/
+specs/tsp-output/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfplan
+*.tfvars
+!example.tfvars
+.terraform.lock.hcl
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+*.env.local
+
+# Logs
+*.log
+logs/
+
+# Apollo composed supergraph (generated, not committed)
+services/router/supergraph.graphql

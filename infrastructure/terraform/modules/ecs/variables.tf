@@ -1,0 +1,9 @@
+variable "cluster_name"    { type = string }
+variable "region"          { type = string }
+variable "vpc_id"          { type = string }
+variable "private_subnets" { type = list(string) }
+variable "services"        { type = list(string) }
+variable "ecr_base_url"    { type = string }
+variable "task_cpu"        { default = 512 }
+variable "task_memory"     { default = 1024 }
+variable "desired_count"   { default = 1 }

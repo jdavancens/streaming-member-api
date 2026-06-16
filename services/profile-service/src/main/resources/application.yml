@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: profile-service
+
+  data:
+    cassandra:
+      contact-points: ${SPRING_DATA_CASSANDRA_CONTACT_POINTS:localhost}
+      port: ${SPRING_DATA_CASSANDRA_PORT:9042}
+      local-datacenter: ${SPRING_DATA_CASSANDRA_LOCAL_DATACENTER:datacenter1}
+      keyspace-name: ${SPRING_DATA_CASSANDRA_KEYSPACE_NAME:member_api}
+      schema-action: create-if-not-exists
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: profile-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+
+  graphql:
+    schema:
+      locations: classpath:graphql/
+    graphiql:
+      enabled: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
