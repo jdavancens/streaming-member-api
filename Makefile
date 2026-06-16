@@ -1,3 +1,5 @@
+export PATH := $(HOME)/.rover/bin:$(PATH)
+
 .PHONY: compose dev build test clean
 
 compose:
