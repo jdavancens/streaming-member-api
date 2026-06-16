@@ -26,8 +26,6 @@ Two API paradigms are implemented:
 - Docker Desktop (or Docker Engine + Compose plugin)
 - Node.js 20+ (for TypeSpec spec validation only)
 
-Java and Maven are **not** required locally — services are compiled inside Docker using multi-stage builds.
-
 ## First-time Setup
 
 **1. Install Rover CLI** (Apollo's schema composition tool):
