@@ -4,16 +4,53 @@ A Consumer Edge GraphQL supergraph that models the member management layer of a 
 
 ## Architecture
 
-```
-Client (iOS / Android / TV / Web)
-  └─ Apollo Router :4000          ← Consumer Edge (supergraph)
-      ├─ member-service      :8081 → Cassandra   (auth, member CRUD)
-      ├─ billing-service     :8082 → MySQL       (plans, subscriptions)
-      ├─ profile-service     :8083 → Cassandra   (up to 5 profiles per member)
-      ├─ entitlement-service :8084 → Redis       (concurrent stream enforcement)
-      └─ discovery-service   :8085               (SDUI home/browse screens)
-                    ↕
-           Kafka  (member.events · subscription.events)
+```mermaid
+flowchart TD
+    subgraph Clients["Client Devices"]
+        iOS["iOS"]
+        Android["Android"]
+        TV["TV"]
+        Web["Web"]
+    end
+
+    subgraph Edge["Consumer Edge"]
+        Router["Apollo Router\n:4000\nFederation v2 supergraph"]
+    end
+
+    subgraph Subgraphs["Subgraph Services"]
+        MS["member-service\n:8081\nidentity · auth · registration"]
+        BS["billing-service\n:8082\nplans · subscriptions"]
+        PS["profile-service\n:8083\nper-account profiles"]
+        ES["entitlement-service\n:8084\nconcurrent stream slots"]
+        DS["discovery-service\n:8085\nSDUI home · browse screens"]
+    end
+
+    subgraph Stores["Data Stores"]
+        Cassandra["Cassandra\nmember · profile"]
+        MySQL["MySQL\nbilling"]
+        Redis["Redis\nstream slots TTL"]
+    end
+
+    subgraph Messaging["Async Messaging"]
+        Kafka["Kafka\nmember.events\nsubscription.events"]
+    end
+
+    iOS & Android & TV & Web -->|GraphQL + REST /auth| Router
+
+    Router -->|GraphQL| MS
+    Router -->|GraphQL| BS
+    Router -->|GraphQL| PS
+    Router -->|GraphQL| ES
+    Router -->|GraphQL| DS
+
+    MS --> Cassandra
+    PS --> Cassandra
+    BS --> MySQL
+    ES --> Redis
+
+    MS -->|publishes MemberRegistered\nMemberCancelled| Kafka
+    BS -->|publishes SubscriptionChanged| Kafka
+    Kafka -->|consumes SubscriptionChanged\nupdates maxStreams cache| ES
 ```
 
 Two API paradigms are implemented:
