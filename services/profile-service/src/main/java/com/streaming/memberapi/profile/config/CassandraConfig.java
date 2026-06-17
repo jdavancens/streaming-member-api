@@ -1,36 +1,30 @@
 package com.streaming.memberapi.profile.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.cassandra.CqlSessionBuilderCustomizer;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.cassandra.config.AbstractCassandraConfiguration;
-import org.springframework.data.cassandra.config.SchemaAction;
+import software.aws.mcs.auth.SigV4AuthProvider;
+
+import javax.net.ssl.SSLContext;
 
 @Configuration
-public class CassandraConfig extends AbstractCassandraConfiguration {
+public class CassandraConfig {
 
-    @Value("${spring.data.cassandra.keyspace-name:member_api}")
-    private String keyspaceName;
-
-    @Value("${spring.data.cassandra.contact-points:localhost}")
-    private String contactPoints;
-
-    @Override
-    protected String getKeyspaceName() {
-        return keyspaceName;
-    }
-
-    @Override
-    public String getContactPoints() {
-        return contactPoints;
-    }
-
-    @Override
-    public SchemaAction getSchemaAction() {
-        return SchemaAction.CREATE_IF_NOT_EXISTS;
-    }
-
-    @Override
-    public String[] getEntityBasePackages() {
-        return new String[]{"com.streaming.memberapi.profile.model"};
+    @Bean
+    @ConditionalOnProperty(name = "cassandra.keyspaces.enabled", havingValue = "true")
+    public CqlSessionBuilderCustomizer keyspacesCustomizer(
+            @Value("${spring.data.cassandra.local-datacenter:us-east-1}") String region) {
+        return builder -> {
+            try {
+                SSLContext ssl = SSLContext.getInstance("TLS");
+                ssl.init(null, null, null);
+                builder.withSslContext(ssl)
+                       .withAuthProvider(new SigV4AuthProvider(region));
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to configure Keyspaces SSL/SigV4", e);
+            }
+        };
     }
 }

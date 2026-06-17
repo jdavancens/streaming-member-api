@@ -1,0 +1,62 @@
+name: Deploy router
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "schema/**"
+      - "supergraph-prod.yaml"
+      - "services/router/**"
+
+jobs:
+  deploy:
+    name: Compose supergraph, build router, deploy
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rover
+        run: |
+          curl -sSL https://rover.apollo.dev/nix/latest | sh
+          echo "$HOME/.rover/bin" >> $GITHUB_PATH
+
+      - name: Compose supergraph
+        run: |
+          rover supergraph compose \
+            --config supergraph-prod.yaml \
+            --elv2-license=accept \
+            > services/router/supergraph.graphql
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push router image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/member-api-dev/router:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/member-api-dev/router:latest \
+                       -f services/router/Dockerfile \
+                       .
+          docker push $ECR_REGISTRY/member-api-dev/router:$IMAGE_TAG
+          docker push $ECR_REGISTRY/member-api-dev/router:latest
+
+      - name: Deploy to ECS Fargate
+        run: |
+          aws ecs update-service \
+            --cluster member-api-dev \
+            --service router \
+            --force-new-deployment \
+            --region us-east-1

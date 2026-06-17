@@ -1,0 +1,27 @@
+federation_version: =2.6.0
+
+subgraphs:
+  member:
+    routing_url: http://member-service.member-api-dev.local:8080/graphql
+    schema:
+      file: ./schema/member/member.graphqls
+
+  billing:
+    routing_url: http://billing-service.member-api-dev.local:8080/graphql
+    schema:
+      file: ./schema/billing/billing.graphqls
+
+  profile:
+    routing_url: http://profile-service.member-api-dev.local:8080/graphql
+    schema:
+      file: ./schema/profile/profile.graphqls
+
+  entitlement:
+    routing_url: http://entitlement-service.member-api-dev.local:8080/graphql
+    schema:
+      file: ./schema/entitlement/entitlement.graphqls
+
+  discovery:
+    routing_url: http://discovery-service.member-api-dev.local:8080/graphql
+    schema:
+      file: ./schema/discovery/discovery.graphqls

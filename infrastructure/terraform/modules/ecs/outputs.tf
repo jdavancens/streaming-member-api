@@ -1,3 +1,4 @@
-output "cluster_name"       { value = aws_ecs_cluster.main.name }
-output "cluster_arn"        { value = aws_ecs_cluster.main.arn }
-output "task_execution_arn" { value = aws_iam_role.task_execution.arn }
+output "cluster_name"   { value = aws_ecs_cluster.main.name }
+output "cluster_arn"    { value = aws_ecs_cluster.main.arn }
+output "task_role_arn"  { value = aws_iam_role.task.arn }
+output "dns_namespace"  { value = aws_service_discovery_private_dns_namespace.main.name }

@@ -15,4 +15,3 @@ jobs:
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
-      APOLLO_KEY: ${{ secrets.APOLLO_KEY }}
