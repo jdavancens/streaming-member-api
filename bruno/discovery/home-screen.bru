@@ -1,0 +1,68 @@
+meta {
+  name: Home Screen
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  query HomeScreen($memberId: ID!, $context: ScreenContext!) {
+    homeScreen(memberId: $memberId, context: $context) {
+      version
+      components {
+        ... on HeroComponent {
+          id
+          title
+          backgroundImageUrl
+          ctaLabel
+          ctaContentId
+          description
+        }
+        ... on RowComponent {
+          id
+          label
+          items {
+            id
+            title
+            thumbnailUrl
+            type
+            durationSeconds
+          }
+        }
+        ... on BillboardComponent {
+          id
+          headline
+          subtext
+          actions {
+            label
+            contentId
+            style
+          }
+        }
+        ... on TabComponent {
+          id
+          tabs {
+            id
+            label
+            selected
+          }
+        }
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "memberId": "{{memberId}}",
+    "context": {
+      "platform": "WEB",
+      "locale": "en-US",
+      "deviceId": "device-001"
+    }
+  }
+}

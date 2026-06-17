@@ -1,0 +1,33 @@
+meta {
+  name: Create Kids Profile
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  mutation CreateKidsProfile($memberId: ID!, $input: CreateProfileInput!) {
+    createProfile(memberId: $memberId, input: $input) {
+      id
+      name
+      isKids
+      language
+      hasPinLock
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "memberId": "{{memberId}}",
+    "input": {
+      "name": "Kids",
+      "isKids": true,
+      "language": "en"
+    }
+  }
+}

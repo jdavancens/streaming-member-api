@@ -2,6 +2,7 @@ package com.streaming.memberapi.member;
 
 import com.netflix.graphql.dgs.DgsQueryExecutor;
 import com.netflix.graphql.dgs.autoconfig.DgsAutoConfiguration;
+import com.netflix.graphql.dgs.autoconfig.DgsExtendedScalarsAutoConfiguration;
 import com.streaming.memberapi.member.datafetcher.MemberDataFetcher;
 import com.streaming.memberapi.member.model.Member;
 import com.streaming.memberapi.member.service.MemberService;
@@ -18,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-@SpringBootTest(classes = {DgsAutoConfiguration.class, MemberDataFetcher.class})
+@SpringBootTest(classes = {DgsAutoConfiguration.class, DgsExtendedScalarsAutoConfiguration.class, MemberDataFetcher.class})
 class MemberDataFetcherTest {
 
     @Autowired

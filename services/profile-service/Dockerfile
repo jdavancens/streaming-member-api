@@ -3,9 +3,9 @@ WORKDIR /workspace
 COPY pom.xml .
 COPY services/profile-service/pom.xml services/profile-service/
 COPY schema/profile/ schema/profile/
-RUN mvn dependency:go-offline -pl services/profile-service -am -q
+RUN cd services/profile-service && mvn dependency:go-offline -q
 COPY services/profile-service/src/ services/profile-service/src/
-RUN mvn clean package -pl services/profile-service -am -DskipTests -q
+RUN cd services/profile-service && mvn clean package -DskipTests -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

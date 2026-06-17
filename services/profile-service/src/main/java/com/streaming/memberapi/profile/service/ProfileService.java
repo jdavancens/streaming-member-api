@@ -2,7 +2,7 @@ package com.streaming.memberapi.profile.service;
 
 import com.streaming.memberapi.profile.model.Profile;
 import com.streaming.memberapi.profile.repository.ProfileRepository;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,12 +13,13 @@ import java.util.UUID;
 public class ProfileService {
 
     private static final int MAX_PROFILES = 5;
-    private static final BCryptPasswordEncoder PIN_ENCODER = new BCryptPasswordEncoder();
 
     private final ProfileRepository profileRepository;
+    private final PasswordEncoder pinEncoder;
 
-    public ProfileService(ProfileRepository profileRepository) {
+    public ProfileService(ProfileRepository profileRepository, PasswordEncoder pinEncoder) {
         this.profileRepository = profileRepository;
+        this.pinEncoder = pinEncoder;
     }
 
     public List<Profile> findByMemberId(UUID memberId) {
@@ -39,7 +40,7 @@ public class ProfileService {
 
         String pin = (String) input.get("pin");
         if (pin != null && !pin.isBlank()) {
-            profile.setPinHash(PIN_ENCODER.encode(pin));
+            profile.setPinHash(pinEncoder.encode(pin));
         }
         return profileRepository.save(profile);
     }
@@ -70,7 +71,7 @@ public class ProfileService {
         return profileRepository.findAll().stream()
             .filter(p -> p.getProfileId().equals(profileId))
             .findFirst()
-            .map(p -> p.getPinHash() != null && PIN_ENCODER.matches(pin, p.getPinHash()))
+            .map(p -> p.getPinHash() != null && pinEncoder.matches(pin, p.getPinHash()))
             .orElse(false);
     }
 }

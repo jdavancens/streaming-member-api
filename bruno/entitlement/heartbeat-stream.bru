@@ -1,0 +1,23 @@
+meta {
+  name: Heartbeat Stream
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  mutation HeartbeatStream($memberId: ID!, $streamId: ID!) {
+    heartbeatStream(memberId: $memberId, streamId: $streamId)
+  }
+}
+
+body:graphql:vars {
+  {
+    "memberId": "{{memberId}}",
+    "streamId": "{{streamId}}"
+  }
+}

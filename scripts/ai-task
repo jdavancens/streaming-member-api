@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+IMAGE="streaming-member-api-sandbox"
+
+if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+  echo "error: ANTHROPIC_API_KEY is not set" >&2
+  exit 1
+fi
+
+if ! docker image inspect "$IMAGE" &>/dev/null; then
+  echo "building sandbox image..."
+  docker build -f "$REPO_ROOT/Dockerfile.sandbox" -t "$IMAGE" "$REPO_ROOT"
+fi
+
+REAL_DOCKER_SOCK="$(readlink -f /var/run/docker.sock 2>/dev/null || echo /var/run/docker.sock)"
+DOCKER_ARGS="-v ${REAL_DOCKER_SOCK}:/var/run/docker.sock \
+  -e DOCKER_HOST=unix:///var/run/docker.sock \
+  -e TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock \
+  -e TESTCONTAINERS_RYUK_DISABLED=true"
+
+if [[ $# -gt 0 ]]; then
+  docker run --rm \
+    -v "$REPO_ROOT":/workspace \
+    -w /workspace \
+    -e ANTHROPIC_API_KEY \
+    $DOCKER_ARGS \
+    "$IMAGE" \
+    claude --dangerously-skip-permissions -p "$*"
+else
+  docker run -it --rm \
+    -v "$REPO_ROOT":/workspace \
+    -w /workspace \
+    -e ANTHROPIC_API_KEY \
+    $DOCKER_ARGS \
+    "$IMAGE" \
+    claude --dangerously-skip-permissions
+fi

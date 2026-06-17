@@ -1,0 +1,40 @@
+meta {
+  name: Create Profile
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  mutation CreateProfile($memberId: ID!, $input: CreateProfileInput!) {
+    createProfile(memberId: $memberId, input: $input) {
+      id
+      name
+      avatarUrl
+      isKids
+      language
+      hasPinLock
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "memberId": "{{memberId}}",
+    "input": {
+      "name": "Main Profile",
+      "isKids": false,
+      "language": "en"
+    }
+  }
+}
+
+script:post-response {
+  if (res.body.data?.createProfile?.id) {
+    bru.setEnvVar("profileId", res.body.data.createProfile.id);
+  }
+}

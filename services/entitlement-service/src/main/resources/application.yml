@@ -21,6 +21,10 @@ spring:
     graphiql:
       enabled: true
 
+dgs:
+  graphql:
+    schema-locations: classpath:graphql/**
+
 server:
   port: 8080
 

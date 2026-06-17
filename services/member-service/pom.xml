@@ -18,11 +18,11 @@
         <!-- GraphQL / DGS -->
         <dependency>
             <groupId>com.netflix.graphql.dgs</groupId>
-            <artifactId>dgs-spring-graphql-starter</artifactId>
+            <artifactId>graphql-dgs-spring-graphql-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>com.netflix.graphql.dgs</groupId>
-            <artifactId>dgs-extended-scalars</artifactId>
+            <artifactId>graphql-dgs-extended-scalars</artifactId>
         </dependency>
 
         <!-- Web -->
@@ -80,7 +80,7 @@
         </dependency>
         <dependency>
             <groupId>com.netflix.graphql.dgs</groupId>
-            <artifactId>dgs-spring-graphql-starter-test</artifactId>
+            <artifactId>graphql-dgs-spring-graphql-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

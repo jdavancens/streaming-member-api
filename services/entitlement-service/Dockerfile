@@ -3,9 +3,9 @@ WORKDIR /workspace
 COPY pom.xml .
 COPY services/entitlement-service/pom.xml services/entitlement-service/
 COPY schema/entitlement/ schema/entitlement/
-RUN mvn dependency:go-offline -pl services/entitlement-service -am -q
+RUN cd services/entitlement-service && mvn dependency:go-offline -q
 COPY services/entitlement-service/src/ services/entitlement-service/src/
-RUN mvn clean package -pl services/entitlement-service -am -DskipTests -q
+RUN cd services/entitlement-service && mvn clean package -DskipTests -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

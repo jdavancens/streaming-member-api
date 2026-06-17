@@ -3,9 +3,9 @@ WORKDIR /workspace
 COPY pom.xml .
 COPY services/member-service/pom.xml services/member-service/
 COPY schema/member/ schema/member/
-RUN mvn dependency:go-offline -pl services/member-service -am -q
+RUN cd services/member-service && mvn dependency:go-offline -q
 COPY services/member-service/src/ services/member-service/src/
-RUN mvn clean package -pl services/member-service -am -DskipTests -q
+RUN cd services/member-service && mvn clean package -DskipTests -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

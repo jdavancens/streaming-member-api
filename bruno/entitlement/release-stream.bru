@@ -1,0 +1,23 @@
+meta {
+  name: Release Stream
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  mutation ReleaseStream($memberId: ID!, $streamId: ID!) {
+    releaseStream(memberId: $memberId, streamId: $streamId)
+  }
+}
+
+body:graphql:vars {
+  {
+    "memberId": "{{memberId}}",
+    "streamId": "{{streamId}}"
+  }
+}

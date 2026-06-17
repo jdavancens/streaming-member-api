@@ -3,9 +3,9 @@ WORKDIR /workspace
 COPY pom.xml .
 COPY services/billing-service/pom.xml services/billing-service/
 COPY schema/billing/ schema/billing/
-RUN mvn dependency:go-offline -pl services/billing-service -am -q
+RUN cd services/billing-service && mvn dependency:go-offline -q
 COPY services/billing-service/src/ services/billing-service/src/
-RUN mvn clean package -pl services/billing-service -am -DskipTests -q
+RUN cd services/billing-service && mvn clean package -DskipTests -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

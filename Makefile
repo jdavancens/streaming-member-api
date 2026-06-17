@@ -1,6 +1,6 @@
 export PATH := $(HOME)/.rover/bin:$(PATH)
 
-.PHONY: compose dev build test clean
+.PHONY: compose dev build test clean sandbox sandbox-build
 
 compose:
 	rover supergraph compose --config supergraph.yaml --elv2-license=accept > services/router/supergraph.graphql
@@ -27,3 +27,9 @@ test:
 clean:
 	mvn clean
 	docker-compose down -v
+
+sandbox-build:
+	docker build -f Dockerfile.sandbox -t streaming-member-api-sandbox .
+
+sandbox:
+	./scripts/ai-task

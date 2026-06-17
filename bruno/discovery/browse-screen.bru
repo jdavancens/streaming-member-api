@@ -1,0 +1,48 @@
+meta {
+  name: Browse Screen
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  query BrowseScreen($memberId: ID!, $context: ScreenContext!, $genre: String) {
+    browseScreen(memberId: $memberId, context: $context, genre: $genre) {
+      genre
+      components {
+        ... on RowComponent {
+          id
+          label
+          items {
+            id
+            title
+            thumbnailUrl
+            type
+            matchScore
+          }
+        }
+        ... on BillboardComponent {
+          id
+          headline
+          subtext
+        }
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "memberId": "{{memberId}}",
+    "genre": "Action",
+    "context": {
+      "platform": "WEB",
+      "locale": "en-US",
+      "deviceId": "device-001"
+    }
+  }
+}

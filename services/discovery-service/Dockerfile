@@ -3,9 +3,9 @@ WORKDIR /workspace
 COPY pom.xml .
 COPY services/discovery-service/pom.xml services/discovery-service/
 COPY schema/discovery/ schema/discovery/
-RUN mvn dependency:go-offline -pl services/discovery-service -am -q
+RUN cd services/discovery-service && mvn dependency:go-offline -q
 COPY services/discovery-service/src/ services/discovery-service/src/
-RUN mvn clean package -pl services/discovery-service -am -DskipTests -q
+RUN cd services/discovery-service && mvn clean package -DskipTests -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

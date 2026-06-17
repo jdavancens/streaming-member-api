@@ -1,0 +1,30 @@
+meta {
+  name: List Plans
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  query {
+    plans {
+      id
+      name
+      monthlyPrice
+      maxStreams
+      maxDownloads
+      videoQuality
+    }
+  }
+}
+
+script:post-response {
+  const plans = res.body.data?.plans;
+  if (plans?.length > 0) {
+    bru.setEnvVar("planId", plans[0].id);
+  }
+}

@@ -1,0 +1,54 @@
+meta {
+  name: Get Member
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  query GetMember($id: ID!) {
+    member(id: $id) {
+      id
+      email
+      fullName
+      country
+      status
+      createdAt
+      subscription {
+        id
+        status
+        plan {
+          name
+          maxStreams
+          videoQuality
+        }
+        periodStart
+        periodEnd
+      }
+      profiles {
+        id
+        name
+        avatarUrl
+        isKids
+        language
+        hasPinLock
+      }
+      canStream {
+        allowed
+        reason
+        concurrentStreams
+        maxStreams
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "id": "{{memberId}}"
+  }
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Acquire Stream
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  mutation AcquireStream($memberId: ID!, $deviceId: String!) {
+    acquireStream(memberId: $memberId, deviceId: $deviceId) {
+      streamId
+      expiresAt
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "memberId": "{{memberId}}",
+    "deviceId": "device-001"
+  }
+}
+
+script:post-response {
+  if (res.body.data?.acquireStream?.streamId) {
+    bru.setEnvVar("streamId", res.body.data.acquireStream.streamId);
+  }
+}

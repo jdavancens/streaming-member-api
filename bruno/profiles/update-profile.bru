@@ -1,0 +1,30 @@
+meta {
+  name: Update Profile
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  mutation UpdateProfile($profileId: ID!, $input: UpdateProfileInput!) {
+    updateProfile(profileId: $profileId, input: $input) {
+      id
+      name
+      avatarUrl
+      language
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "profileId": "{{profileId}}",
+    "input": {
+      "name": "Updated Name"
+    }
+  }
+}

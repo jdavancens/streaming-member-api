@@ -1,0 +1,42 @@
+meta {
+  name: Register Member
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  mutation Register($input: RegisterInput!) {
+    register(input: $input) {
+      member {
+        id
+        email
+        fullName
+        country
+        status
+        createdAt
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "input": {
+      "email": "test@example.com",
+      "password": "password123",
+      "fullName": "Test User",
+      "country": "US"
+    }
+  }
+}
+
+script:post-response {
+  if (res.body.data?.register?.member?.id) {
+    bru.setEnvVar("memberId", res.body.data.register.member.id);
+  }
+}

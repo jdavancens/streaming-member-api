@@ -1,0 +1,43 @@
+meta {
+  name: Subscribe
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}
+  body: graphql
+}
+
+body:graphql {
+  mutation Subscribe($input: SubscribeInput!) {
+    subscribe(input: $input) {
+      subscription {
+        id
+        status
+        plan {
+          name
+          monthlyPrice
+          maxStreams
+        }
+        periodStart
+        periodEnd
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "input": {
+      "memberId": "{{memberId}}",
+      "planId": "{{planId}}"
+    }
+  }
+}
+
+script:post-response {
+  if (res.body.data?.subscribe?.subscription?.id) {
+    bru.setEnvVar("subscriptionId", res.body.data.subscribe.subscription.id);
+  }
+}
