@@ -74,3 +74,16 @@ jobs:
       - name: No schema changes — skipping
         if: steps.changes.outputs.changed == 'false'
         run: echo "No schema/specs/supergraph changes detected. Skipping."
+
+  schema-check:
+    name: schema-check
+    runs-on: ubuntu-latest
+    needs: [validate-specs, validate-graphql]
+    if: always()
+    steps:
+      - name: All schema checks passed
+        run: |
+          if [[ "${{ needs.validate-specs.result }}" == "failure" || "${{ needs.validate-graphql.result }}" == "failure" ]]; then
+            exit 1
+          fi
+          echo "OK"
