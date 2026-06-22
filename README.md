@@ -1,6 +1,6 @@
 # Streaming Member API
 
-A Consumer Edge GraphQL supergraph that models the member management layer of a streaming platform. Five Spring Boot subgraphs are composed into a unified API by Apollo Router using Federation v2. Development is schema-first: GraphQL SDL files are the source of truth, and TypeSpec covers the REST auth and async event contracts.
+A Consumer Edge GraphQL supergraph that models the member management layer of a streaming platform. Five TypeScript/Node.js subgraphs are composed into a unified API by Apollo Router using Federation v2. Development is schema-first: GraphQL SDL files are the source of truth, and TypeSpec covers the REST auth and async event contracts.
 
 ## Architecture
 
@@ -25,17 +25,17 @@ flowchart TD
         DS["discovery-service\n:8085\nSDUI home · browse screens"]
     end
 
-    subgraph Stores["Data Stores"]
-        Cassandra["Cassandra\nmember · profile"]
-        MySQL["MySQL\nbilling"]
-        Redis["Redis\nstream slots TTL"]
+    subgraph Stores["Data Stores (AWS)"]
+        DDB["DynamoDB\nmembers · profiles\nstream_slots TTL"]
+        MySQL["RDS MySQL\nbilling"]
     end
 
-    subgraph Messaging["Async Messaging"]
-        Kafka["Kafka\nmember.events\nsubscription.events"]
+    subgraph Messaging["Async Messaging (AWS)"]
+        SNS["SNS\nmember-events\nsubscription-events"]
+        SQS["SQS\nprofile-member-events\nentitlement-subscription-events"]
     end
 
-    iOS & Android & TV & Web -->|GraphQL + REST /auth| Router
+    iOS & Android & TV & Web -->|GraphQL| Router
 
     Router -->|GraphQL| MS
     Router -->|GraphQL| BS
@@ -43,14 +43,16 @@ flowchart TD
     Router -->|GraphQL| ES
     Router -->|GraphQL| DS
 
-    MS --> Cassandra
-    PS --> Cassandra
+    MS --> DDB
+    PS --> DDB
+    ES --> DDB
     BS --> MySQL
-    ES --> Redis
 
-    MS -->|publishes MemberRegistered\nMemberCancelled| Kafka
-    BS -->|publishes SubscriptionChanged| Kafka
-    Kafka -->|consumes SubscriptionChanged\nupdates maxStreams cache| ES
+    MS -->|publishes MemberRegistered| SNS
+    BS -->|publishes SubscriptionCreated\nSubscriptionChanged| SNS
+    SNS -->|fan-out| SQS
+    SQS -->|consumes member events| PS
+    SQS -->|consumes subscription events\nupdates maxStreams cache| ES
 ```
 
 Two API paradigms are implemented:
@@ -58,29 +60,71 @@ Two API paradigms are implemented:
 - **Client-driven** — standard GraphQL queries; clients declare what fields they need
 - **Server-Driven UI (SDUI)** — `homeScreen` / `browseScreen` queries return a `DiscoveryComponent` union; the client renders whatever component tree the server returns
 
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| API gateway | Apollo Router v1.55 (Federation v2) |
+| Subgraph runtime | Node.js 20 + TypeScript + Apollo Server 4 |
+| member / profile / entitlement | DynamoDB (PAY_PER_REQUEST) |
+| billing | RDS MySQL 8.4 (db.t3.micro) |
+| async events | SNS → SQS (fan-out) |
+| stream slot TTL | DynamoDB TTL attribute |
+| schema contracts | GraphQL SDL + TypeSpec |
+| infra provisioning | CloudFormation (dev) + Terraform (prod) |
+
 ## Prerequisites
 
 - Docker Desktop (or Docker Engine + Compose plugin)
+- [Rover CLI](https://www.apollographql.com/docs/rover/getting-started) — Apollo's schema composition tool
+- AWS CLI configured with credentials that have access to DynamoDB, RDS, SNS, SQS
 - Node.js 20+ (for TypeSpec spec validation only)
 
-## First-time Setup
-
-**1. Install Rover CLI** (Apollo's schema composition tool):
+**Install Rover:**
 ```bash
 curl -sSL https://rover.apollo.dev/nix/latest | sh
 ```
-Rover installs to `~/.rover/bin/`. The Makefile adds this to PATH automatically — no shell config needed.
 
-**2. Pull infrastructure images** — do this once to avoid slow first-start:
+## First-time Setup
+
+**1. Provision AWS dev resources** (one-time, idempotent):
 ```bash
-docker pull apache/kafka:3.7.1
-docker pull cassandra:5.0
-docker pull mysql:8.4
-docker pull redis:7.4-alpine
-docker pull ghcr.io/apollographql/router:v1.55.0
+make aws-setup
 ```
 
-**3. Install TypeSpec tooling** (only needed if editing specs/):
+This deploys `scripts/dev-resources.yaml` (CloudFormation) which creates:
+- DynamoDB tables: `members`, `profiles`, `stream_slots` (with TTL)
+- SNS topics: `member-events`, `subscription-events`
+- SQS queues: `profile-member-events`, `entitlement-subscription-events` (with SNS subscriptions)
+- RDS MySQL: `billing-dev` (db.t3.micro, publicly accessible for dev)
+
+**2. Create a `.env` file** from the CloudFormation outputs:
+```bash
+# AWS credentials
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+
+# member-service
+JWT_SECRET=...
+MEMBER_EVENTS_TOPIC_ARN=...  # output from aws-setup
+
+# billing-service
+MYSQL_HOST=...               # BillingDBEndpoint output from aws-setup
+MYSQL_USER=billing
+MYSQL_PASSWORD=...
+MYSQL_DATABASE=billing
+SUBSCRIPTION_EVENTS_TOPIC_ARN=...
+
+# profile-service
+PROFILE_MEMBER_EVENTS_QUEUE_URL=...
+
+# entitlement-service
+ENT_SUBSCRIPTION_EVENTS_QUEUE_URL=...
+STREAM_SLOT_TTL_SECONDS=14400
+```
+
+**3. Install TypeSpec tooling** (only needed if editing `specs/`):
 ```bash
 cd specs && npm ci && cd ..
 ```
@@ -93,28 +137,33 @@ make dev
 
 `make dev` does two things in order:
 1. `make compose` — runs `rover supergraph compose` to build `services/router/supergraph.graphql` from the SDL files in `schema/`
-2. `docker-compose up` — builds service images (Maven compiles inside Docker via multi-stage builds) and starts everything
+2. `docker compose up --build` — builds all 5 service images (TypeScript compiles inside Docker) and starts everything
 
 Router at **http://localhost:4000** · GraphiQL sandbox at **http://localhost:4000/**
 
+Services connect to real AWS — no local emulators.
+
 ## Spec-Driven Workflow
 
-**SDL files in `schema/` are the contract.** Never edit schema files inside a service directory — those are generated from `schema/` at build time via Maven Resources Plugin.
+**SDL files in `schema/` are the contract.** Never edit schema files inside a service directory — each service's `schema.ts` inlines the SDL directly from the source-of-truth files.
 
-To add or change an endpoint:
+To add or change a field:
 
 ```bash
 # 1. Edit the SDL
 vim schema/member/member.graphqls
 
-# 2. Validate the change composes cleanly
+# 2. Update the corresponding service's schema.ts to match
+vim services/member-service/src/schema.ts
+
+# 3. Validate composition
 make compose
 
-# 3. Restart the service to pick up the schema change
-docker-compose up --build member-service
+# 4. Rebuild and restart
+docker compose up --build member-service
 ```
 
-TypeSpec specs (REST auth + Kafka events) live in `specs/`:
+TypeSpec specs (REST auth + event contracts) live in `specs/`:
 
 ```bash
 make spec-check    # tsp compile --no-emit
@@ -122,7 +171,7 @@ make spec-check    # tsp compile --no-emit
 
 ## Example Queries
 
-**Client-driven — fetch member dashboard in one round trip:**
+**Client-driven — fetch member dashboard in one round trip (exercises all 5 subgraphs):**
 ```graphql
 query MemberDashboard($memberId: ID!) {
   member(id: $memberId) {
@@ -149,7 +198,7 @@ query HomeScreen($memberId: ID!, $context: ScreenContext!) {
 }
 ```
 
-**Acquire a stream slot (enforces concurrent limit by plan tier):**
+**Acquire a stream slot (enforces concurrent limit per plan tier via DynamoDB TTL):**
 ```graphql
 mutation {
   acquireStream(memberId: "uuid", deviceId: "device-abc") {
@@ -158,6 +207,10 @@ mutation {
   }
 }
 ```
+
+## Stream Slot TTL
+
+`entitlement-service` enforces concurrent stream limits using DynamoDB TTL on the `stream_slots` table. Each slot has an `expiresAt` epoch attribute. The client must call `heartbeatStream` every 60 seconds or the slot expires after `STREAM_SLOT_TTL_SECONDS` (default: 4 hours). Plan limits (`maxStreams`) are cached in-memory and updated by consuming `subscription-events` from SQS.
 
 ## Schema Governance
 
@@ -183,6 +236,5 @@ terraform init && terraform plan && terraform apply
 |---|---|
 | `AWS_OIDC_ROLE_ARN` | Output from `terraform apply` → `github_actions_role_arn` |
 | `AWS_ACCOUNT_ID` | Your AWS account number |
-| `APOLLO_KEY` | Apollo GraphOS key (optional — for schema registry) |
 
-Each service has its own path-scoped workflow so only changed services rebuild.
+Each service has its own path-scoped workflow so only changed services rebuild. The CI workflow builds the TypeScript service, pushes to ECR, and forces a new ECS Fargate deployment.
