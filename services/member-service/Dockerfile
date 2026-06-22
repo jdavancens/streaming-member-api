@@ -1,14 +1,13 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /workspace
-COPY pom.xml .
-COPY services/member-service/pom.xml services/member-service/
-COPY schema/member/ schema/member/
-RUN cd services/member-service && mvn dependency:go-offline -q
-COPY services/member-service/src/ services/member-service/src/
-RUN cd services/member-service && mvn clean package -DskipTests -q
-
-FROM eclipse-temurin:21-jre-alpine
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY --from=build /workspace/services/member-service/target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+COPY services/member-service/package*.json services/member-service/tsconfig.json ./
+RUN npm ci
+COPY services/member-service/src/ ./src/
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY services/member-service/package.json services/member-service/tsconfig.json ./
+RUN npm run build
+CMD ["node", "dist/index.js"]

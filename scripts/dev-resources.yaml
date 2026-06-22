@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: streaming-member-api dev resources (DynamoDB + SQS + SNS + RDS MySQL)
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Default VPC ID
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnet IDs (at least 2 AZs for subnet group)
+  DevMachineIp:
+    Type: String
+    Description: Your public IP in CIDR notation (e.g. 1.2.3.4/32)
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: RDS master password
+
+Resources:
+
+  # ── DynamoDB Tables ──────────────────────────────────────────────────────────
+
+  MembersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: members
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  ProfilesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: profiles
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: memberId
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: memberId
+          KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
+
+  StreamSlotsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: stream_slots
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: streamId
+          AttributeType: S
+        - AttributeName: memberId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: streamId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: memberId-index
+          KeySchema:
+            - AttributeName: memberId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+
+  # ── SNS Topics ───────────────────────────────────────────────────────────────
+
+  MemberEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: member-events
+
+  SubscriptionEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: subscription-events
+
+  # ── SQS Queues ───────────────────────────────────────────────────────────────
+
+  ProfileMemberEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: profile-member-events
+
+  EntitlementSubscriptionEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: entitlement-subscription-events
+
+  ProfileQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ProfileMemberEventsQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt ProfileMemberEventsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref MemberEventsTopic
+
+  EntitlementQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref EntitlementSubscriptionEventsQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt EntitlementSubscriptionEventsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref SubscriptionEventsTopic
+
+  ProfileSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref MemberEventsTopic
+      Protocol: sqs
+      Endpoint: !GetAtt ProfileMemberEventsQueue.Arn
+
+  EntitlementSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref SubscriptionEventsTopic
+      Protocol: sqs
+      Endpoint: !GetAtt EntitlementSubscriptionEventsQueue.Arn
+
+  # ── RDS MySQL (Free Tier: db.t3.micro) ───────────────────────────────────────
+
+  BillingDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Billing RDS subnet group
+      SubnetIds: !Ref SubnetIds
+
+  BillingDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow MySQL access from dev machine
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Ref DevMachineIp
+
+  BillingDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: billing-dev
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      EngineVersion: "8.4"
+      MasterUsername: billing
+      MasterUserPassword: !Ref DBPassword
+      DBName: billing
+      AllocatedStorage: 20
+      StorageType: gp2
+      PubliclyAccessible: true
+      DBSubnetGroupName: !Ref BillingDBSubnetGroup
+      VPCSecurityGroups:
+        - !GetAtt BillingDBSecurityGroup.GroupId
+      DeletionProtection: false
+
+Outputs:
+  MemberEventsTopicArn:
+    Value: !Ref MemberEventsTopic
+  SubscriptionEventsTopicArn:
+    Value: !Ref SubscriptionEventsTopic
+  ProfileMemberEventsQueueUrl:
+    Value: !Ref ProfileMemberEventsQueue
+  EntitlementSubscriptionEventsQueueUrl:
+    Value: !Ref EntitlementSubscriptionEventsQueue
+  BillingDBEndpoint:
+    Value: !GetAtt BillingDB.Endpoint.Address

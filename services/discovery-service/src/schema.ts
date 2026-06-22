@@ -1,0 +1,104 @@
+import gql from 'graphql-tag';
+
+export const typeDefs = gql`
+  extend schema
+    @link(
+      url: "https://specs.apollo.dev/federation/v2.6"
+      import: ["@key"]
+    )
+
+  type Query {
+    homeScreen(memberId: ID!, context: ScreenContext!): HomeScreen!
+    browseScreen(memberId: ID!, genre: String, context: ScreenContext!): BrowseScreen!
+  }
+
+  union DiscoveryComponent =
+      HeroComponent
+    | RowComponent
+    | BillboardComponent
+    | TabComponent
+
+  type HomeScreen {
+    components: [DiscoveryComponent!]!
+    version: String!
+  }
+
+  type BrowseScreen {
+    components: [DiscoveryComponent!]!
+    genre: String
+  }
+
+  type HeroComponent {
+    id: ID!
+    title: String!
+    backgroundImageUrl: String!
+    logoImageUrl: String
+    ctaLabel: String!
+    ctaContentId: ID!
+    description: String
+  }
+
+  type RowComponent {
+    id: ID!
+    label: String!
+    items: [ContentItem!]!
+  }
+
+  type BillboardComponent {
+    id: ID!
+    headline: String!
+    subtext: String
+    actions: [BillboardAction!]!
+  }
+
+  type TabComponent {
+    id: ID!
+    tabs: [Tab!]!
+  }
+
+  type ContentItem {
+    id: ID!
+    title: String!
+    thumbnailUrl: String!
+    type: ContentType!
+    durationSeconds: Int
+    matchScore: Int
+  }
+
+  type BillboardAction {
+    label: String!
+    contentId: ID!
+    style: ActionStyle!
+  }
+
+  type Tab {
+    id: ID!
+    label: String!
+    selected: Boolean!
+  }
+
+  enum ContentType {
+    MOVIE
+    SERIES
+    GAME
+    LIVE
+  }
+
+  enum ActionStyle {
+    PRIMARY
+    SECONDARY
+  }
+
+  input ScreenContext {
+    platform: Platform!
+    locale: String
+    deviceId: String
+  }
+
+  enum Platform {
+    IOS
+    ANDROID
+    TV
+    WEB
+  }
+`;
