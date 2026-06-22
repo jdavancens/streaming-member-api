@@ -1,14 +1,13 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /workspace
-COPY pom.xml .
-COPY services/profile-service/pom.xml services/profile-service/
-COPY schema/profile/ schema/profile/
-RUN cd services/profile-service && mvn dependency:go-offline -q
-COPY services/profile-service/src/ services/profile-service/src/
-RUN cd services/profile-service && mvn clean package -DskipTests -q
-
-FROM eclipse-temurin:21-jre-alpine
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY --from=build /workspace/services/profile-service/target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+COPY services/profile-service/package*.json services/profile-service/tsconfig.json ./
+RUN npm ci
+COPY services/profile-service/src/ ./src/
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY services/profile-service/package.json services/profile-service/tsconfig.json ./
+RUN npm run build
+CMD ["node", "dist/index.js"]

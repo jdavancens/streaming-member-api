@@ -1,6 +1,6 @@
 export PATH := $(HOME)/.rover/bin:$(PATH)
 
-.PHONY: compose dev build test clean sandbox sandbox-build
+.PHONY: compose dev build test clean aws-setup sandbox sandbox-build
 
 compose:
 	rover supergraph compose --config supergraph.yaml --elv2-license=accept > services/router/supergraph.graphql
@@ -16,17 +16,26 @@ spec-check:
 	cd specs && npx tsp compile . --no-emit
 
 dev: compose
-	docker-compose up
+	docker-compose up --build
+
+aws-setup:
+	bash scripts/aws-setup.sh
 
 build:
-	mvn clean package -DskipTests
+	for svc in member billing profile entitlement discovery; do \
+	  cd services/$$svc-service && npm ci && npm run build && cd ../..; \
+	done
 
 test:
-	mvn test
+	for svc in member billing profile entitlement discovery; do \
+	  cd services/$$svc-service && npm test && cd ../..; \
+	done
 
 clean:
-	mvn clean
 	docker-compose down -v
+	for svc in member billing profile entitlement discovery; do \
+	  rm -rf services/$$svc-service/dist services/$$svc-service/node_modules; \
+	done
 
 sandbox-build:
 	docker build -f Dockerfile.sandbox -t streaming-member-api-sandbox .

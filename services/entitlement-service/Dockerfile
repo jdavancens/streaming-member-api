@@ -1,14 +1,13 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /workspace
-COPY pom.xml .
-COPY services/entitlement-service/pom.xml services/entitlement-service/
-COPY schema/entitlement/ schema/entitlement/
-RUN cd services/entitlement-service && mvn dependency:go-offline -q
-COPY services/entitlement-service/src/ services/entitlement-service/src/
-RUN cd services/entitlement-service && mvn clean package -DskipTests -q
-
-FROM eclipse-temurin:21-jre-alpine
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY --from=build /workspace/services/entitlement-service/target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+COPY services/entitlement-service/package*.json services/entitlement-service/tsconfig.json ./
+RUN npm ci
+COPY services/entitlement-service/src/ ./src/
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY services/entitlement-service/package.json services/entitlement-service/tsconfig.json ./
+RUN npm run build
+CMD ["node", "dist/index.js"]

@@ -1,0 +1,82 @@
+import gql from 'graphql-tag';
+
+export const typeDefs = gql`
+  extend schema
+    @link(
+      url: "https://specs.apollo.dev/federation/v2.6"
+      import: ["@key", "@external"]
+    )
+
+  scalar DateTime
+
+  type Query {
+    plans: [Plan!]!
+    plan(id: ID!): Plan
+  }
+
+  type Mutation {
+    subscribe(input: SubscribeInput!): SubscribePayload!
+    cancelSubscription(memberId: ID!): CancelPayload!
+    changePlan(memberId: ID!, planId: ID!): ChangePlanPayload!
+  }
+
+  type Member @key(fields: "id") {
+    id: ID! @external
+    subscription: Subscription
+  }
+
+  type Subscription @key(fields: "id") {
+    id: ID!
+    plan: Plan!
+    status: SubscriptionStatus!
+    periodStart: DateTime!
+    periodEnd: DateTime!
+    cancelledAt: DateTime
+  }
+
+  type Plan @key(fields: "id") {
+    id: ID!
+    name: PlanTier!
+    monthlyPrice: Float!
+    maxStreams: Int!
+    maxDownloads: Int!
+    videoQuality: VideoQuality!
+  }
+
+  enum PlanTier {
+    MOBILE
+    BASIC
+    STANDARD
+    PREMIUM
+  }
+
+  enum VideoQuality {
+    SD
+    HD
+    UHD
+  }
+
+  enum SubscriptionStatus {
+    TRIALING
+    ACTIVE
+    CANCELLED
+    PAST_DUE
+  }
+
+  input SubscribeInput {
+    memberId: ID!
+    planId: ID!
+  }
+
+  type SubscribePayload {
+    subscription: Subscription!
+  }
+
+  type CancelPayload {
+    subscription: Subscription!
+  }
+
+  type ChangePlanPayload {
+    subscription: Subscription!
+  }
+`;
