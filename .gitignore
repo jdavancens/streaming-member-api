@@ -44,3 +44,4 @@ services/router/supergraph.graphql
 # Node.js service builds
 services/*/node_modules/
 services/*/dist/
+PLAN.md
