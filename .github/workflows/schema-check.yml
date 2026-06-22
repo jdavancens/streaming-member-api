@@ -2,10 +2,6 @@ name: Schema Validation
 
 on:
   pull_request:
-    paths:
-      - "schema/**"
-      - "specs/**"
-      - "supergraph.yaml"
 
 jobs:
   validate-specs:
@@ -13,32 +9,68 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for schema changes
+        id: changes
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -qE '^(schema/|specs/|supergraph\.yaml)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
       - uses: actions/setup-node@v4
+        if: steps.changes.outputs.changed == 'true'
         with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: specs/package.json
 
       - name: Install TypeSpec
+        if: steps.changes.outputs.changed == 'true'
         run: cd specs && npm ci
 
       - name: Compile specs (no emit)
+        if: steps.changes.outputs.changed == 'true'
         run: cd specs && npx tsp compile . --no-emit
+
+      - name: No schema changes — skipping
+        if: steps.changes.outputs.changed == 'false'
+        run: echo "No schema/specs/supergraph changes detected. Skipping."
 
   validate-graphql:
     name: Validate GraphQL schemas
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for schema changes
+        id: changes
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -qE '^(schema/|specs/|supergraph\.yaml)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Install Rover
+        if: steps.changes.outputs.changed == 'true'
         run: |
           curl -sSL https://rover.apollo.dev/nix/latest | sh
           echo "$HOME/.rover/bin" >> $GITHUB_PATH
 
       - name: Compose supergraph locally
+        if: steps.changes.outputs.changed == 'true'
         run: rover supergraph compose --config supergraph.yaml --output /tmp/supergraph.graphql
 
       - name: Validate composed schema
+        if: steps.changes.outputs.changed == 'true'
         run: rover graph introspect --schema /tmp/supergraph.graphql || true
+
+      - name: No schema changes — skipping
+        if: steps.changes.outputs.changed == 'false'
+        run: echo "No schema/specs/supergraph changes detected. Skipping."
