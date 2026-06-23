@@ -22,13 +22,18 @@ data "aws_caller_identity" "current" {}
 locals {
   name       = "member-api-dev"
   account_id = data.aws_caller_identity.current.account_id
-  dns_ns     = "${local.name}.local"
 
   subgraph_services = [
     "member-service", "billing-service", "profile-service",
     "entitlement-service", "discovery-service"
   ]
   all_services = concat(["router"], local.subgraph_services)
+}
+
+# ── CloudFormation outputs (data stores provisioned by scripts/dev-resources.yaml) ──
+
+data "aws_cloudformation_stack" "dev" {
+  name = "streaming-member-api-dev"
 }
 
 # ── Networking ───────────────────────────────────────────────────────────────
@@ -49,7 +54,7 @@ module "alb" {
   public_subnets = module.vpc.public_subnets
 }
 
-# ── Data Stores ──────────────────────────────────────────────────────────────
+# ── Compute / Container Registry ─────────────────────────────────────────────
 
 module "ecr" {
   source   = "../../modules/ecr"
@@ -57,36 +62,7 @@ module "ecr" {
   services = local.all_services
 }
 
-module "rds" {
-  source     = "../../modules/rds"
-  name       = local.name
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-}
-
-module "msk" {
-  source     = "../../modules/msk"
-  name       = local.name
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-}
-
-module "redis" {
-  source     = "../../modules/redis"
-  name       = local.name
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-}
-
-module "keyspaces" {
-  source     = "../../modules/keyspaces"
-  name       = local.name
-  region     = var.aws_region
-  account_id = local.account_id
-  keyspaces  = ["member_api", "profile_api"]
-}
-
-# ── Secrets (generated, stored in Secrets Manager — never in git) ─────────────
+# ── Secrets ──────────────────────────────────────────────────────────────────
 
 resource "random_password" "jwt_secret" {
   length  = 64
@@ -102,13 +78,22 @@ resource "aws_secretsmanager_secret_version" "jwt_secret" {
   secret_string = random_password.jwt_secret.result
 }
 
+resource "aws_secretsmanager_secret" "mysql_password" {
+  name = "${local.name}/mysql/password"
+}
+
+resource "aws_secretsmanager_secret_version" "mysql_password" {
+  secret_id     = aws_secretsmanager_secret.mysql_password.id
+  secret_string = var.mysql_password
+}
+
 # ── IAM ──────────────────────────────────────────────────────────────────────
 
 module "iam" {
   source      = "../../modules/iam"
   name        = local.name
   region      = var.aws_region
-  github_repo = "josephdavancens/streaming-member-api"
+  github_repo = "jdavancens/streaming-member-api"
 }
 
 # ── ECS ──────────────────────────────────────────────────────────────────────
@@ -123,24 +108,21 @@ module "ecs" {
   router_tg_arn   = module.alb.router_tg_arn
   alb_sg_id       = module.alb.alb_sg_id
 
-  extra_task_policies = [module.keyspaces.keyspaces_policy_arn]
+  extra_task_policies = [module.iam.dynamodb_policy_arn]
 
   services = {
     router = {
-      port = 4000
+      port        = 4000
       environment = []
       secrets     = []
     }
 
     member-service = {
-      port = 8080
+      port = 8081
       environment = [
-        { name = "SPRING_DATA_CASSANDRA_CONTACT_POINTS",    value = module.keyspaces.contact_point },
-        { name = "SPRING_DATA_CASSANDRA_PORT",              value = tostring(module.keyspaces.port) },
-        { name = "SPRING_DATA_CASSANDRA_LOCAL_DATACENTER",  value = var.aws_region },
-        { name = "SPRING_DATA_CASSANDRA_KEYSPACE_NAME",     value = "member_api" },
-        { name = "CASSANDRA_KEYSPACES_ENABLED",             value = "true" },
-        { name = "SPRING_KAFKA_BOOTSTRAP_SERVERS",          value = module.msk.bootstrap_brokers },
+        { name = "PORT",                      value = "8081" },
+        { name = "AWS_REGION",               value = var.aws_region },
+        { name = "MEMBER_EVENTS_TOPIC_ARN",  value = data.aws_cloudformation_stack.dev.outputs["MemberEventsTopicArn"] },
       ]
       secrets = [
         { name = "JWT_SECRET", valueFrom = aws_secretsmanager_secret.jwt_secret.arn },
@@ -148,44 +130,46 @@ module "ecs" {
     }
 
     billing-service = {
-      port = 8080
+      port = 8082
       environment = [
-        { name = "SPRING_DATASOURCE_URL",          value = "jdbc:mysql://${module.rds.endpoint}/billing_db" },
-        { name = "SPRING_DATASOURCE_USERNAME",     value = "billing" },
-        { name = "SPRING_KAFKA_BOOTSTRAP_SERVERS", value = module.msk.bootstrap_brokers },
+        { name = "PORT",                             value = "8082" },
+        { name = "AWS_REGION",                      value = var.aws_region },
+        { name = "MYSQL_HOST",                      value = data.aws_cloudformation_stack.dev.outputs["BillingDBEndpoint"] },
+        { name = "MYSQL_USER",                      value = "billing" },
+        { name = "MYSQL_DATABASE",                  value = "billing" },
+        { name = "SUBSCRIPTION_EVENTS_TOPIC_ARN",  value = data.aws_cloudformation_stack.dev.outputs["SubscriptionEventsTopicArn"] },
       ]
       secrets = [
-        { name = "SPRING_DATASOURCE_PASSWORD", valueFrom = module.rds.password_secret_arn },
+        { name = "MYSQL_PASSWORD", valueFrom = aws_secretsmanager_secret.mysql_password.arn },
       ]
     }
 
     profile-service = {
-      port = 8080
+      port = 8083
       environment = [
-        { name = "SPRING_DATA_CASSANDRA_CONTACT_POINTS",    value = module.keyspaces.contact_point },
-        { name = "SPRING_DATA_CASSANDRA_PORT",              value = tostring(module.keyspaces.port) },
-        { name = "SPRING_DATA_CASSANDRA_LOCAL_DATACENTER",  value = var.aws_region },
-        { name = "SPRING_DATA_CASSANDRA_KEYSPACE_NAME",     value = "profile_api" },
-        { name = "CASSANDRA_KEYSPACES_ENABLED",             value = "true" },
-        { name = "SPRING_KAFKA_BOOTSTRAP_SERVERS",          value = module.msk.bootstrap_brokers },
+        { name = "PORT",                             value = "8083" },
+        { name = "AWS_REGION",                      value = var.aws_region },
+        { name = "PROFILE_MEMBER_EVENTS_QUEUE_URL", value = data.aws_cloudformation_stack.dev.outputs["ProfileMemberEventsQueueUrl"] },
       ]
       secrets = []
     }
 
     entitlement-service = {
-      port = 8080
+      port = 8084
       environment = [
-        { name = "SPRING_DATA_REDIS_HOST",         value = module.redis.primary_endpoint },
-        { name = "SPRING_DATA_REDIS_PORT",         value = "6379" },
-        { name = "SPRING_KAFKA_BOOTSTRAP_SERVERS", value = module.msk.bootstrap_brokers },
+        { name = "PORT",                                  value = "8084" },
+        { name = "AWS_REGION",                           value = var.aws_region },
+        { name = "ENT_SUBSCRIPTION_EVENTS_QUEUE_URL",   value = data.aws_cloudformation_stack.dev.outputs["EntitlementSubscriptionEventsQueueUrl"] },
+        { name = "STREAM_SLOT_TTL_SECONDS",              value = "14400" },
       ]
       secrets = []
     }
 
     discovery-service = {
-      port = 8080
+      port = 8085
       environment = [
-        { name = "SPRING_KAFKA_BOOTSTRAP_SERVERS", value = module.msk.bootstrap_brokers },
+        { name = "PORT",       value = "8085" },
+        { name = "AWS_REGION", value = var.aws_region },
       ]
       secrets = []
     }

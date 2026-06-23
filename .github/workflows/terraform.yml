@@ -1,0 +1,45 @@
+name: Terraform Validate
+
+on:
+  pull_request:
+    paths:
+      - "infrastructure/terraform/**"
+  push:
+    branches-ignore: [main]
+    paths:
+      - "infrastructure/terraform/**"
+
+jobs:
+  validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/environments/dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.9"
+
+      - name: terraform init
+        run: terraform init -backend=false
+
+      - name: terraform fmt check
+        run: terraform fmt -check -recursive ../../
+
+      - name: terraform validate
+        run: terraform validate
+
+  terraform-check:
+    name: terraform-check
+    runs-on: ubuntu-latest
+    needs: [validate]
+    if: always()
+    steps:
+      - name: All Terraform checks passed
+        run: |
+          if [[ "${{ needs.validate.result }}" == "failure" ]]; then exit 1; fi
+          echo "OK"
