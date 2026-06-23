@@ -1,8 +1,8 @@
 name: Deploy router
 
 on:
-  push:
-    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - "schema/**"
       - "supergraph-prod.yaml"
@@ -10,6 +10,7 @@ on:
 
 jobs:
   deploy:
+    if: github.event.pull_request.draft == false
     name: Compose supergraph, build router, deploy
     runs-on: ubuntu-latest
     permissions:

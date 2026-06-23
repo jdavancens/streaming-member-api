@@ -1,14 +1,15 @@
 name: Deploy discovery-service
 
 on:
-  push:
-    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - "services/discovery-service/**"
       - "schema/discovery/**"
 
 jobs:
   deploy:
+    if: github.event.pull_request.draft == false
     uses: ./.github/workflows/_deploy-service.yml
     with:
       service: discovery-service

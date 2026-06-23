@@ -1,15 +1,15 @@
 name: Deploy entitlement-service
 
 on:
-  push:
-    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - "services/entitlement-service/**"
       - "schema/entitlement/**"
-      - "specs/events/**"
 
 jobs:
   deploy:
+    if: github.event.pull_request.draft == false
     uses: ./.github/workflows/_deploy-service.yml
     with:
       service: entitlement-service

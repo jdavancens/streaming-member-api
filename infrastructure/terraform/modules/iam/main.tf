@@ -98,6 +98,33 @@ resource "aws_iam_role_policy" "github_actions" {
           "iam:PassRole"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::streaming-member-api-tfstate-dev",
+          "arn:aws:s3:::streaming-member-api-tfstate-dev/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"
+        ]
+        Resource = "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/streaming-member-api-tfstate-lock"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:CreateSecret", "secretsmanager:PutSecretValue", "secretsmanager:DeleteSecret", "secretsmanager:DescribeSecret", "secretsmanager:GetSecretValue"]
+        Resource = "arn:aws:secretsmanager:${var.region}:${data.aws_caller_identity.current.account_id}:secret:${var.name}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:*", "elasticloadbalancing:*", "iam:*", "logs:*", "servicediscovery:*"]
+        Resource = "*"
       }
     ]
   })

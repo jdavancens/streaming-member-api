@@ -1,0 +1,20 @@
+{
+  "name": "streaming-member-api-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest --forceExit",
+    "test:integration": "jest --forceExit --testPathPattern=integration",
+    "test:functional": "jest --forceExit --testPathPattern=functional"
+  },
+  "dependencies": {
+    "graphql-request": "^7.1.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.17.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
+  }
+}
