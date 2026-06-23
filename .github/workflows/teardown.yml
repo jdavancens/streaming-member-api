@@ -1,0 +1,39 @@
+name: Teardown
+
+on:
+  workflow_dispatch:
+
+jobs:
+  teardown:
+    name: Destroy all compute infra
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Scale ECS to 0 (speeds up terraform destroy)
+        run: |
+          for svc in router member-service billing-service profile-service entitlement-service discovery-service; do
+            aws ecs update-service --cluster member-api-dev --service $svc --desired-count 0 --no-cli-pager 2>/dev/null || true
+          done
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.9"
+
+      - name: terraform init
+        working-directory: infrastructure/terraform/environments/dev
+        run: terraform init
+
+      - name: terraform destroy
+        working-directory: infrastructure/terraform/environments/dev
+        run: terraform destroy -auto-approve -var="aws_account_id=${{ secrets.AWS_ACCOUNT_ID }}" -var="mysql_password=${{ secrets.MYSQL_PASSWORD }}"
