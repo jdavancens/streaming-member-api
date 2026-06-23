@@ -57,8 +57,8 @@ resource "aws_iam_policy" "dynamodb_access" {
         Resource = "arn:aws:sns:${var.region}:${data.aws_caller_identity.current.account_id}:*"
       },
       {
-        Effect = "Allow"
-        Action = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Effect   = "Allow"
+        Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
         Resource = "arn:aws:sqs:${var.region}:${data.aws_caller_identity.current.account_id}:*"
       }
     ]

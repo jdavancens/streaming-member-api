@@ -120,9 +120,9 @@ module "ecs" {
     member-service = {
       port = 8081
       environment = [
-        { name = "PORT",                      value = "8081" },
-        { name = "AWS_REGION",               value = var.aws_region },
-        { name = "MEMBER_EVENTS_TOPIC_ARN",  value = data.aws_cloudformation_stack.dev.outputs["MemberEventsTopicArn"] },
+        { name = "PORT", value = "8081" },
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "MEMBER_EVENTS_TOPIC_ARN", value = data.aws_cloudformation_stack.dev.outputs["MemberEventsTopicArn"] },
       ]
       secrets = [
         { name = "JWT_SECRET", valueFrom = aws_secretsmanager_secret.jwt_secret.arn },
@@ -132,12 +132,12 @@ module "ecs" {
     billing-service = {
       port = 8082
       environment = [
-        { name = "PORT",                             value = "8082" },
-        { name = "AWS_REGION",                      value = var.aws_region },
-        { name = "MYSQL_HOST",                      value = data.aws_cloudformation_stack.dev.outputs["BillingDBEndpoint"] },
-        { name = "MYSQL_USER",                      value = "billing" },
-        { name = "MYSQL_DATABASE",                  value = "billing" },
-        { name = "SUBSCRIPTION_EVENTS_TOPIC_ARN",  value = data.aws_cloudformation_stack.dev.outputs["SubscriptionEventsTopicArn"] },
+        { name = "PORT", value = "8082" },
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "MYSQL_HOST", value = data.aws_cloudformation_stack.dev.outputs["BillingDBEndpoint"] },
+        { name = "MYSQL_USER", value = "billing" },
+        { name = "MYSQL_DATABASE", value = "billing" },
+        { name = "SUBSCRIPTION_EVENTS_TOPIC_ARN", value = data.aws_cloudformation_stack.dev.outputs["SubscriptionEventsTopicArn"] },
       ]
       secrets = [
         { name = "MYSQL_PASSWORD", valueFrom = aws_secretsmanager_secret.mysql_password.arn },
@@ -147,8 +147,8 @@ module "ecs" {
     profile-service = {
       port = 8083
       environment = [
-        { name = "PORT",                             value = "8083" },
-        { name = "AWS_REGION",                      value = var.aws_region },
+        { name = "PORT", value = "8083" },
+        { name = "AWS_REGION", value = var.aws_region },
         { name = "PROFILE_MEMBER_EVENTS_QUEUE_URL", value = data.aws_cloudformation_stack.dev.outputs["ProfileMemberEventsQueueUrl"] },
       ]
       secrets = []
@@ -157,10 +157,10 @@ module "ecs" {
     entitlement-service = {
       port = 8084
       environment = [
-        { name = "PORT",                                  value = "8084" },
-        { name = "AWS_REGION",                           value = var.aws_region },
-        { name = "ENT_SUBSCRIPTION_EVENTS_QUEUE_URL",   value = data.aws_cloudformation_stack.dev.outputs["EntitlementSubscriptionEventsQueueUrl"] },
-        { name = "STREAM_SLOT_TTL_SECONDS",              value = "14400" },
+        { name = "PORT", value = "8084" },
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "ENT_SUBSCRIPTION_EVENTS_QUEUE_URL", value = data.aws_cloudformation_stack.dev.outputs["EntitlementSubscriptionEventsQueueUrl"] },
+        { name = "STREAM_SLOT_TTL_SECONDS", value = "14400" },
       ]
       secrets = []
     }
@@ -168,7 +168,7 @@ module "ecs" {
     discovery-service = {
       port = 8085
       environment = [
-        { name = "PORT",       value = "8085" },
+        { name = "PORT", value = "8085" },
         { name = "AWS_REGION", value = var.aws_region },
       ]
       secrets = []

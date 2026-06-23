@@ -30,19 +30,19 @@ resource "aws_secretsmanager_secret_version" "db_password" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier           = "${var.name}-mysql"
-  engine               = "mysql"
-  engine_version       = "8.0"
-  instance_class       = var.instance_class
-  allocated_storage    = 20
-  db_name              = var.database_name
-  username             = var.username
-  password             = random_password.db_password.result
-  db_subnet_group_name = aws_db_subnet_group.main.name
+  identifier             = "${var.name}-mysql"
+  engine                 = "mysql"
+  engine_version         = "8.0"
+  instance_class         = var.instance_class
+  allocated_storage      = 20
+  db_name                = var.database_name
+  username               = var.username
+  password               = random_password.db_password.result
+  db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
-  skip_final_snapshot  = var.skip_final_snapshot
-  multi_az             = var.multi_az
-  storage_encrypted    = true
+  skip_final_snapshot    = var.skip_final_snapshot
+  multi_az               = var.multi_az
+  storage_encrypted      = true
 
   tags = { Name = "${var.name}-mysql" }
 }
