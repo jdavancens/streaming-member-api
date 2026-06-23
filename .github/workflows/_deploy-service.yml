@@ -68,3 +68,29 @@ jobs:
             --service ${{ inputs.service }} \
             --force-new-deployment \
             --region ${{ inputs.aws_region }}
+
+      - name: Wait for ECS service stability
+        run: |
+          aws ecs wait services-stable \
+            --cluster member-api-dev \
+            --services ${{ inputs.service }} \
+            --region ${{ inputs.aws_region }}
+
+      - name: Smoke test
+        env:
+          ALB_DNS: ${{ vars.ALB_DNS }}
+        run: |
+          echo "Hitting GraphQL endpoint at http://$ALB_DNS/ ..."
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://$ALB_DNS/" \
+              -H 'Content-Type: application/json' \
+              -d '{"query":"{ __typename }"}')
+            if [[ "$STATUS" == "200" ]]; then
+              echo "Smoke test passed (HTTP 200)"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS — retrying in 10s..."
+            sleep 10
+          done
+          echo "Smoke test failed after 5 attempts"
+          exit 1
