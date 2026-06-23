@@ -1,0 +1,38 @@
+name: Destroy Infra (full teardown)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to confirm full teardown'
+        required: true
+
+jobs:
+  destroy:
+    name: terraform destroy
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'destroy'
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.9"
+
+      - name: terraform init
+        working-directory: infrastructure/terraform/environments/dev
+        run: terraform init
+
+      - name: terraform destroy
+        working-directory: infrastructure/terraform/environments/dev
+        run: terraform destroy -auto-approve -var="aws_account_id=${{ secrets.AWS_ACCOUNT_ID }}" -var="mysql_password=${{ secrets.MYSQL_PASSWORD }}"

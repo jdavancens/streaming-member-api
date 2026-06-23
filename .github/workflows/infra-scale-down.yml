@@ -1,0 +1,42 @@
+name: Scale Down Infra
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC (10 PM EST) every day
+  workflow_dispatch:
+
+jobs:
+  scale-down:
+    name: Scale ECS to 0, stop RDS
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Scale ECS services to 0
+        run: |
+          CLUSTER=member-api-dev
+          for svc in router member-service billing-service profile-service entitlement-service discovery-service; do
+            echo "Scaling $svc to 0..."
+            aws ecs update-service --cluster $CLUSTER --service $svc --desired-count 0 --no-cli-pager || echo "$svc not found, skipping"
+          done
+
+      - name: Stop RDS instance
+        run: |
+          STATUS=$(aws rds describe-db-instances \
+            --db-instance-identifier billing-dev \
+            --query 'DBInstances[0].DBInstanceStatus' \
+            --output text 2>/dev/null || echo "not-found")
+          if [[ "$STATUS" == "available" ]]; then
+            echo "Stopping RDS billing-dev..."
+            aws rds stop-db-instance --db-instance-identifier billing-dev --no-cli-pager
+          else
+            echo "RDS status: $STATUS — skipping"
+          fi
