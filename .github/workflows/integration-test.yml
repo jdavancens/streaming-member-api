@@ -1,0 +1,55 @@
+name: Integration & Functional Tests
+
+on:
+  workflow_run:
+    workflows:
+      - Deploy member-service
+      - Deploy billing-service
+      - Deploy profile-service
+      - Deploy entitlement-service
+      - Deploy discovery-service
+      - Deploy router
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Router URL to test against (defaults to ALB)'
+        required: false
+
+jobs:
+  test:
+    name: Run integration & functional tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Install
+        run: npm ci
+        working-directory: tests
+
+      - name: Run integration tests (direct service endpoints)
+        env:
+          SERVICE_URL_8081: http://${{ vars.ALB_DNS }}:8081
+          SERVICE_URL_8082: http://${{ vars.ALB_DNS }}:8082
+          SERVICE_URL_8083: http://${{ vars.ALB_DNS }}:8083
+          SERVICE_URL_8084: http://${{ vars.ALB_DNS }}:8084
+          SERVICE_URL_8085: http://${{ vars.ALB_DNS }}:8085
+        run: npm run test:integration
+        working-directory: tests
+
+      - name: Run functional tests (via router)
+        env:
+          TARGET_URL: ${{ inputs.target_url || format('http://{0}', vars.ALB_DNS) }}
+        run: npm run test:functional
+        working-directory: tests

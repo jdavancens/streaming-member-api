@@ -1,14 +1,15 @@
 name: Deploy profile-service
 
 on:
-  push:
-    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - "services/profile-service/**"
       - "schema/profile/**"
 
 jobs:
   deploy:
+    if: github.event.pull_request.draft == false
     uses: ./.github/workflows/_deploy-service.yml
     with:
       service: profile-service
