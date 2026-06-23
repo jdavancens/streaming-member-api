@@ -1,4 +1,4 @@
-variable "name"       { type = string }
-variable "region"     { type = string }
+variable "name" { type = string }
+variable "region" { type = string }
 variable "account_id" { type = string }
-variable "keyspaces"  { type = list(string) }
+variable "keyspaces" { type = list(string) }

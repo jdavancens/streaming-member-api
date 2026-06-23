@@ -31,6 +31,40 @@ resource "aws_iam_role" "github_actions" {
   })
 }
 
+# Policy for ECS tasks to access DynamoDB, SNS, SQS
+resource "aws_iam_policy" "dynamodb_access" {
+  name = "${var.name}-dynamodb-access"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem", "dynamodb:Query", "dynamodb:Scan"
+        ]
+        Resource = [
+          "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/members",
+          "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/profiles",
+          "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/stream_slots",
+          "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/stream_slots/index/*",
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = "arn:aws:sns:${var.region}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Resource = "arn:aws:sqs:${var.region}:${data.aws_caller_identity.current.account_id}:*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy" "github_actions" {
   name = "deploy-policy"
   role = aws_iam_role.github_actions.id

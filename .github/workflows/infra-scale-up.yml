@@ -1,0 +1,43 @@
+name: Scale Up Infra
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scale-up:
+    name: Start RDS, scale ECS to 1
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Start RDS instance
+        run: |
+          STATUS=$(aws rds describe-db-instances \
+            --db-instance-identifier billing-dev \
+            --query 'DBInstances[0].DBInstanceStatus' \
+            --output text 2>/dev/null || echo "not-found")
+          if [[ "$STATUS" == "stopped" ]]; then
+            echo "Starting RDS billing-dev..."
+            aws rds start-db-instance --db-instance-identifier billing-dev --no-cli-pager
+            echo "Waiting for RDS to be available (~3 min)..."
+            aws rds wait db-instance-available --db-instance-identifier billing-dev
+            echo "RDS is available"
+          else
+            echo "RDS status: $STATUS — no action needed"
+          fi
+
+      - name: Scale ECS services to 1
+        run: |
+          CLUSTER=member-api-dev
+          for svc in member-service billing-service profile-service entitlement-service discovery-service router; do
+            echo "Scaling $svc to 1..."
+            aws ecs update-service --cluster $CLUSTER --service $svc --desired-count 1 --no-cli-pager || echo "$svc not found, skipping"
+          done

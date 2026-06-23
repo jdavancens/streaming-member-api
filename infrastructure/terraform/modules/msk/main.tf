@@ -4,8 +4,8 @@ resource "aws_msk_cluster" "main" {
   number_of_broker_nodes = var.broker_count
 
   broker_node_group_info {
-    instance_type   = var.instance_type
-    client_subnets  = var.subnet_ids
+    instance_type  = var.instance_type
+    client_subnets = var.subnet_ids
     storage_info {
       ebs_storage_info { volume_size = 20 }
     }
