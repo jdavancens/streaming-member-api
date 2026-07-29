@@ -10,7 +10,7 @@
   "dependencies": {
     "@apollo/server": "^5.5.0",
     "@apollo/subgraph": "^2.9.0",
-    "body-parser": "^1.20.3",
+    "body-parser": "^1.20.6",
     "cors": "^2.8.5",
     "express": "^4.21.1",
     "graphql": "^16.9.0",
